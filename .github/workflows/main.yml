@@ -2,7 +2,7 @@ name: Daily TikTok Streak
 on:
   schedule:
     # Runs at 14:00 UTC (9:00 AM EST) every day
-    - cron: '0 14 * * *'
+    - cron: '2 11 * * *'
   workflow_dispatch: # This adds a "Run Now" button for testing
 
 jobs:
