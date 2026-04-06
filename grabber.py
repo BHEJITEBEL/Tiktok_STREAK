@@ -4,7 +4,7 @@ from github import Github, Auth
 import os
 
 # --- YOUR CONFIGURATION ---
-GITHUB_TOKEN = "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"  # Put the token you just made here
+GITHUB_TOKEN = "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"  # Put the token you just made here
 REPO_NAME = "BHEJITEBEL/Tiktok_STREAK" # e.g. "johndoe/streak-bot"
 
 def upload_to_github(file_path):
@@ -24,35 +24,58 @@ def upload_to_github(file_path):
             repo.create_file("state.json", "Initial cookie upload", content)
         
         return True
+    
     except Exception as e:
-        print(f"GitHub Error: {e}")
-        return False
+        print(f"GitHub Error: {e}") # This prints to your terminal
+        return str(e) # We return the actual error message
 
 def start_process():
     status_label.configure(text="Opening TikTok...", text_color="yellow")
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        context = browser.new_context()
+        # --- STEALTH FLAGS ADDED HERE ---
+        browser = p.chromium.launch(
+            headless=False,
+            args=[
+                "--disable-blink-features=AutomationControlled", # Hides bot flag
+                "--disable-infobars",
+                "--start-maximized"
+            ],
+            ignore_default_args=["--enable-automation"] # Removes "controlled by automated test software" banner
+        )
+        context = browser.new_context(
+            viewport={'width': 1280, 'height': 720},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" # Fakes a normal Chrome browser
+        )
+        # --------------------------------
+        
         page = context.new_page()
         page.goto("https://www.tiktok.com/login")
         
         # UI instructions
-        info_label.configure(text="1. Log in to TikTok.\n2. Once your feed loads, CLOSE this browser.")
+        info_label.configure(text="1. Log in to TikTok (USE QR CODE).\n2. Once your feed loads, CLOSE this browser.")
         
         # Wait for user to close browser
         while len(browser.contexts) > 0:
-            context.storage_state(path="state.json")
-            page.wait_for_timeout(1000)
+            try:
+                context.storage_state(path="state.json")
+                page.wait_for_timeout(1000)
+            except:
+                break # Safely exits loop if browser is closed abruptly
 
     # Browser is closed, now upload
     status_label.configure(text="Uploading to Cloud...", text_color="cyan")
-    if upload_to_github("state.json"):
+    
+    upload_result = upload_to_github("state.json")
+    
+    if upload_result is True:
         status_label.configure(text="DONE! You can close this app now.", text_color="green")
         info_label.configure(text="The streak will start automatically in the cloud.")
     else:
-        status_label.configure(text="Upload Failed. Check Token/Repo.", text_color="red")
-
+        # This will show the EXACT error on the screen!
+        status_label.configure(text="Upload Failed.", text_color="red")
+        info_label.configure(text=f"Error: {upload_result}")
+        
 # --- UI Setup ---
 app = ctk.CTk()
 app.title("Streak Setup")
