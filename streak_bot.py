@@ -2,43 +2,58 @@ import asyncio
 import random
 from playwright.async_api import async_playwright
 
-# --- CONFIG ---
-# The EXE will upload 'state.json' to the same folder as this script in the repo
+# --- CONFIGURATION ---
 COOKIE_PATH = "state.json" 
-# Replace this with the link to the TikTok chat (get it from your browser)
-TARGET_URL = "https://www.tiktok.com/messages?lang=en&u=YOUR_FRIEND_ID"
+# 👇 Just put your friend's actual TikTok username here (keep the @ symbol)
+FRIEND_USERNAME = "@your_friends_username"
 
 async def send_streak():
+    print("Starting bot...")
     async with async_playwright() as p:
-        # Launching headless=True because there is no screen in the cloud
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
         
-        # Load the cookies the user uploaded via the EXE
-        context = await browser.new_context(storage_state=COOKIE_PATH)
+        context = await browser.new_context(
+            storage_state=COOKIE_PATH,
+            viewport={'width': 1280, 'height': 720},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
         page = await context.new_page()
         
-        print("Navigating to chat...")
-        await page.goto(TARGET_URL)
+        # We add ?lang=en to force the page into English so the bot can read the "Message" button
+        print(f"Navigating to {FRIEND_USERNAME}'s profile...")
+        await page.goto(f"https://www.tiktok.com/{FRIEND_USERNAME}?lang=en")
         
-        # Wait for the message box to be interactable
-        # TikTok's message box is usually a div with contenteditable="true"
+        # 1. Click the "Message" button on their profile
+        try:
+            print("Looking for the Message button...")
+            message_btn = page.locator('button:has-text("Message"), a:has-text("Message")').first
+            await message_btn.wait_for(state="visible", timeout=15000)
+            await message_btn.click()
+            await asyncio.sleep(3) # Wait a few seconds for the chat window to open
+        except Exception as e:
+            print("Error: Could not find the Message button. Make sure you follow each other!")
+            await browser.close()
+            return
+            
+        # 2. Wait for the typing box to appear
         selector = 'div[contenteditable="true"]'
         try:
-            await page.wait_for_selector(selector, timeout=15000)
+            await page.wait_for_selector(selector, timeout=20000)
             
             # Type a random streak message
-            messages = ["🔥", "APIII", "api 🔥", "Streak"]
+            messages = ["🔥", "Streak!", "Daily 🔥", "Active ✨", "Streak"]
             chosen_msg = random.choice(messages)
             
             await page.fill(selector, chosen_msg)
-            await asyncio.sleep(random.uniform(1, 3)) # Human-like pause
+            await asyncio.sleep(random.uniform(1, 3)) # Human-like pause before sending
             await page.keyboard.press("Enter")
             
             print(f"Successfully sent: {chosen_msg}")
         except Exception as e:
-            print(f"Failed to find message box: {e}")
-            # Take a screenshot if it fails so you can see why in GitHub logs
-            await page.screenshot(path="error_screenshot.png")
+            print(f"Error: Could not type the message. {e}")
             
         await browser.close()
 
