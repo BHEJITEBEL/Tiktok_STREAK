@@ -1,0 +1,26 @@
+name: Daily TikTok Streak
+on:
+  schedule:
+    # Runs at 14:00 UTC (9:00 AM EST) every day
+    - cron: '0 14 * * *'
+  workflow_dispatch: # This adds a "Run Now" button for testing
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          python -m playwright install chromium
+
+      - name: Run Streak Bot
+        run: python streak_bot.py
