@@ -5,7 +5,7 @@ from playwright.async_api import async_playwright
 # --- CONFIGURATION ---
 COOKIE_PATH = "state.json" 
 # 👇 Just put your friend's actual TikTok username here (keep the @ symbol)
-FRIEND_USERNAME = "@your_friends_username"
+FRIEND_USERNAME = "@hzeeqx"
 
 async def send_streak():
     print("Starting bot...")
